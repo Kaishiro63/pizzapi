@@ -1,26 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { DeleteResult, Repository } from 'typeorm';
 import { CreatePizzaDto } from './dto/create-pizza.dto';
 import { UpdatePizzaDto } from './dto/update-pizza.dto';
+import { Pizza } from './entities/pizza.entity';
 
 @Injectable()
 export class PizzasService {
-  create(createPizzaDto: CreatePizzaDto) {
-    return 'This action adds a new pizza';
+  findOneBy: any;
+  constructor(@InjectRepository(Pizza) private data: Repository<Pizza>) {}
+
+  create(dto: CreatePizzaDto): Promise<Pizza> {
+    return this.data.save(dto);
   }
 
-  findAll() {
-    return `This action returns all pizzas`;
+  findAll(): Promise<Pizza[]> {
+    return this.data.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} pizza`;
+  findOne(id: number): Promise<Pizza> {
+    return this.data.findOneBy({ id }).catch(() => {
+      throw new NotFoundException(id);
+    });
   }
 
-  update(id: number, updatePizzaDto: UpdatePizzaDto) {
-    return `This action updates a #${id} pizza`;
+  async update(id: number, dto: UpdatePizzaDto): Promise<Pizza> {
+    const done = await this.data.update(id, dto);
+    if (done.affected != 1) throw new NotFoundException(id);
+    return this.findOneBy({ id });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} pizza`;
+  async remove(id: number): Promise<void> {
+    const done: DeleteResult = await this.data.delete(id);
+    if (done.affected != 1) throw new NotFoundException(id);
   }
 }
